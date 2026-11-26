@@ -1,0 +1,26 @@
+digraph G {
+  rankdir=LR; fontname="Helvetica"; node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", fillcolor="#ffffff", color="#9aa3b5"];
+  edge [fontname="Helvetica", fontsize=9, color="#6b7385"];
+  label="Prototype architecture (what is implemented)"; labelloc=t; fontsize=16;
+
+  subgraph cluster_browser { label="Browser (Chrome / Edge)"; style="rounded,filled"; fillcolor="#e8f0fe"; color="#c9dafb";
+    mic [label="Microphone"]; stt [label="STT\nWeb Speech API\n(streaming, 8 languages)"]; ui [label="Call UI\nlive lead card, sentiment,\nRAG sources, booking"];
+    tts [label="TTS\nspeechSynthesis\n(barge-in)"]; dash [label="CRM dashboard\nKPIs, funnel, objections,\nsummaries"];
+    mic -> stt -> ui; ui -> tts;
+  }
+  subgraph cluster_api { label="FastAPI backend (app/)"; style="rounded,filled"; fillcolor="#fff3e6"; color="#f4d2ad";
+    api [label="REST API\nmain.py"]; agent [label="Agent orchestrator\nagent.py"];
+    mem [label="Memory\nshort-term: last 12 turns\nlong-term: CRM profile +\npast call summaries"];
+    rag [label="RAG retriever\nrag.py (BM25)"]; qual [label="Lead scoring (BANT)\nqualification.py"];
+    book [label="Booking\natomic slot claim"]; summ [label="Post-call summary\n+ insights\nanalytics.py"]; crm [label="CRM sync\ncrm.py (webhook)"];
+    api -> agent; agent -> mem; agent -> rag; agent -> qual; agent -> book; agent -> summ; agent -> crm; summ -> crm;
+  }
+  llm [label="LLM (any OpenAI-compatible)\nGemini / Groq / OpenAI / Ollama\nJSON: reply, facts, sentiment,\nintent, action\n(rule-based fallback offline)", fillcolor="#e9f7ef", color="#a6dcbc"];
+  kb [label="knowledge/*.md\nproducts, pricing,\nFAQ, objections", shape=folder, fillcolor="#fafafa"];
+  db [label="SQLite CRM\nleads, calls, messages,\nslots, appointments,\ncrm_events", shape=cylinder, fillcolor="#fafafa"];
+  ext [label="External CRM\nHubSpot / Zoho / Salesforce\nvia webhook (Zapier, n8n)", fillcolor="#f3eefe", color="#cbb9f2"];
+
+  ui -> api [label="POST /api/calls/{id}/turn\n(text)"]; api -> ui [label="reply + lead + score"];
+  dash -> api [label="GET /api/dashboard"];
+  agent -> llm; rag -> kb; mem -> db; qual -> db; book -> db; summ -> db; crm -> ext [style=dashed];
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CRM dashboard · AI Sales Voice Agent</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1><span>●</span> SunVolt Solar · CRM &amp; business insights</h1>
+  <nav><a href="/">← Voice agent</a> <a href="#" id="refresh">Refresh</a></nav>
+</header>
+<main>
+  <section class="card wide"><h2>KPIs</h2><div class="kpis" id="kpis"></div></section>
+  <section class="card"><h2>Lead funnel</h2><table id="funnel"></table></section>
+  <section class="card"><h2>Top objections · call outcomes · languages</h2><div id="mix" class="small"></div></section>
+  <section class="card wide"><h2>Leads</h2><table id="leads"></table></section>
+  <section class="card"><h2>Appointments</h2><table id="appts"></table></section>
+  <section class="card"><h2>CRM sync events</h2><table id="events"></table></section>
+  <section class="card wide"><h2>Calls &amp; AI summaries</h2><table id="calls"></table></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const table = (cols, rows) => `<tr>${cols.map(c => `<th>${c[0]}</th>`).join("")}</tr>` +
+  (rows.length ? rows.map(r => `<tr>${cols.map(c => `<td>${c[1](r)}</td>`).join("")}</tr>`).join("")
+               : `<tr><td colspan="${cols.length}" class="small">No data yet</td></tr>`);
+const pill = (v) => `<span class="pill ${esc(v)}">${esc(v)}</span>`;
+const kv = (o) => Object.entries(o).map(([k, v]) => `${esc(k)}: <b>${v}</b>`).join(" · ") || "–";
+
+async function load() {
+  const d = await (await fetch("/api/dashboard")).json();
+  const k = d.kpis;
+  $("kpis").innerHTML = [["Leads", k.total_leads], ["Calls completed", k.calls_completed], ["Appointments", k.appointments],
+    ["Conversion", k.conversion_rate_pct + "%"], ["Avg lead score", k.avg_lead_score], ["Avg sentiment (-1..1)", k.avg_sentiment],
+    ["Avg caller turns", k.avg_turns_per_call]].map(([l, v]) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join("");
+  $("funnel").innerHTML = table([["Status", r => pill(r[0])], ["Leads", r => r[1]]],
+    ["cold", "warm", "hot", "booked", "not_interested"].map(s => [s, d.funnel[s] || 0]));
+  $("mix").innerHTML = `<p><b>Objections:</b> ${d.top_objections.map(([o, n]) => `${esc(o)} (${n})`).join(", ") || "–"}</p>
+    <p><b>Outcomes:</b> ${kv(d.outcomes)}</p><p><b>Languages:</b> ${kv(d.languages)}</p>`;
+  $("leads").innerHTML = table([["Name", r => esc(r.name || "–")], ["Phone", r => esc(r.phone)], ["City", r => esc(r.city || "–")],
+    ["Property", r => esc(r.property_type || "–")], ["Owner", r => r.is_owner === 1 ? "Yes" : r.is_owner === 0 ? "No" : "–"],
+    ["Bill ₹", r => esc(r.monthly_bill_inr || "–")], ["Timeline", r => esc(r.timeline || "–")],
+    ["Score", r => r.score], ["Status", r => pill(r.status)], ["Updated", r => esc(r.updated_at)]], d.leads);
+  $("appts").innerHTML = table([["When", r => esc(r.starts_at.replace("T", " "))], ["Lead", r => esc(r.name || r.phone)],
+    ["Type", r => esc(r.kind)]], d.appointments);
+  $("events").innerHTML = table([["#", r => r.id], ["Event", r => esc(r.event)], ["Lead", r => r.lead_id],
+    ["Webhook", r => r.delivered ? "delivered" : "logged"], ["At", r => esc(r.created_at)]], d.crm_events);
+  $("calls").innerHTML = table([["#", r => r.id], ["Lead", r => esc(r.name || r.phone)], ["Lang", r => esc(r.language)],
+    ["Started", r => esc(r.started_at)], ["Outcome", r => r.outcome ? pill(r.outcome) : pill(r.status)],
+    ["Sentiment", r => r.sentiment_score ?? "–"],
+    ["Summary", r => r.summary ? `${esc(r.summary.summary)}<br><span class="small">Next: ${esc(r.summary.next_steps)}</span>` : "–"],
+    ["Transcript", r => `<a href="/api/calls/${r.id}" target="_blank">view</a>`]], d.calls);
+}
+$("refresh").onclick = (e) => { e.preventDefault(); load(); };
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>

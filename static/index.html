@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Sales Voice Agent</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1><span>●</span> SunVolt Solar · AI Sales Voice Agent</h1>
+  <nav><span id="brain" class="pill"></span><a href="/dashboard" target="_blank">CRM dashboard →</a></nav>
+</header>
+<main>
+  <section class="card">
+    <h2>Live call</h2>
+    <div class="row">
+      <input id="phone" placeholder="Caller phone (caller ID)" value="9876543210" size="16">
+      <select id="lang"></select>
+      <button id="start">Start call</button>
+      <button id="end" class="danger" disabled>End call</button>
+      <label class="small"><input type="checkbox" id="autolisten" checked> auto-listen after agent speaks</label>
+    </div>
+    <div id="transcript"></div>
+    <div class="row">
+      <button id="mic" title="Talk" disabled>🎙</button>
+      <div style="flex:1">
+        <div id="status">Press “Start call”. Use Chrome or Edge for voice.</div>
+        <form id="textform" class="row" style="margin-top:6px">
+          <input id="text" placeholder="…or type what the caller says" style="flex:1" disabled>
+          <button class="secondary" id="send" disabled>Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>Lead qualification</h2>
+      <div class="row"><b id="leadname">–</b> <span id="leadstatus" class="pill">–</span>
+        <span class="small" style="margin-left:auto">Score <b id="score">0</b>/100</span></div>
+      <div class="bar"><div id="scorebar"></div></div>
+      <table id="leadtable"></table>
+      <ul class="reasons" id="reasons"></ul>
+    </div>
+    <div class="card">
+      <h2>Sentiment &amp; intent</h2>
+      <div id="sentiment" class="small">–</div>
+    </div>
+    <div class="card">
+      <h2>Knowledge retrieved (RAG)</h2>
+      <div id="rag" class="small">–</div>
+    </div>
+    <div class="card">
+      <h2>Appointment</h2>
+      <div id="booking" class="small">Not booked yet.</div>
+    </div>
+    <div class="card" id="summarycard" hidden>
+      <h2>Call summary</h2>
+      <div id="summary" class="small"></div>
+    </div>
+  </aside>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

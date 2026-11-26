@@ -1,0 +1,33 @@
+digraph G {
+  rankdir=LR; fontname="Helvetica"; compound=true; node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", fillcolor="#ffffff", color="#9aa3b5"];
+  edge [fontname="Helvetica", fontsize=9, color="#6b7385"];
+  label="Production architecture (scales to 1,00,000 users)"; labelloc=t; fontsize=16;
+
+  phone [label="Caller (PSTN / mobile)"]; web [label="Web / app widget\n(WebRTC)"];
+  tel [label="Telephony (Plivo / Exotel)\nSIP + media streams\nDLT / DND compliance", fillcolor="#e8f0fe"];
+  edge_lb [label="API Gateway + LB\nWAF, TLS, rate limits", fillcolor="#e8f0fe"];
+
+  subgraph cluster_k8s { label="Kubernetes (autoscaled, ap-south-1 / Mumbai)"; style="rounded,filled"; fillcolor="#fff3e6"; color="#f4d2ad";
+    media [label="Voice gateway pods\nWebSocket audio, VAD,\nbarge-in, jitter buffer"];
+    orch [label="Agent orchestrator pods\n(stateless; = app/agent.py)"];
+    api [label="CRM / dashboard API pods"];
+    workers [label="Async workers\nsummaries, CRM sync,\nanalytics, retries"];
+    media -> orch;
+  }
+  subgraph cluster_ai { label="AI providers (behind a router with fallbacks)"; style="rounded,filled"; fillcolor="#e9f7ef"; color="#a6dcbc";
+    stt [label="Streaming STT\nDeepgram / Google / Sarvam"]; llm [label="LLM\nGemini Flash / GPT mini /\nself-hosted Llama"]; tts [label="Streaming TTS\nDeepgram Aura / Azure /\nElevenLabs"];
+  }
+  subgraph cluster_data { label="Data layer (encrypted at rest)"; style="rounded,filled"; fillcolor="#fafafa"; color="#d0d4dc";
+    redis [label="Redis\nlive call state,\nshort-term memory", shape=cylinder];
+    pg [label="PostgreSQL + pgvector\nCRM, appointments,\nembeddings (RAG)", shape=cylinder];
+    q [label="Queue\nSQS / Kafka", shape=cylinder];
+    s3 [label="Object storage\nrecordings, transcripts\n(retention policy)", shape=cylinder];
+    wh [label="Analytics warehouse\nBigQuery / ClickHouse", shape=cylinder];
+  }
+  ext [label="External systems\nHubSpot / Salesforce / Zoho,\nGoogle Calendar, WhatsApp", fillcolor="#f3eefe", color="#cbb9f2"];
+  obs [label="Observability\nlatency per stage, cost/min,\nconversion, alerts", fillcolor="#fdf6d8"];
+
+  phone -> tel -> media; web -> edge_lb -> media; edge_lb -> api;
+  media -> stt; media -> tts; orch -> llm; orch -> redis; orch -> pg; orch -> q; q -> workers;
+  workers -> pg; workers -> s3; workers -> wh; workers -> ext; api -> pg; orch -> obs [style=dashed];
+}
